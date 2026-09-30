@@ -22,12 +22,28 @@ export default function HikvisionDevicePanel({ companies = [] }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [expanded, setExpanded] = useState(false);
+  const [bridgeSyncs, setBridgeSyncs] = useState({});
+
+  const loadBridgeSyncs = async (list) => {
+    const cloud = (list || []).filter((d) => !d.lan_mode);
+    const entries = await Promise.all(
+      cloud.map(async (d) => {
+        try {
+          return [d.id, await hikvisionService.getSyncRequests(d.id)];
+        } catch {
+          return [d.id, null];
+        }
+      })
+    );
+    setBridgeSyncs(Object.fromEntries(entries));
+  };
 
   const loadDevices = async () => {
     setLoading(true);
     try {
       const data = await hikvisionService.listDevices();
       setDevices(data);
+      loadBridgeSyncs(data);
     } catch (e) {
       console.error(e);
     } finally {
@@ -38,6 +54,16 @@ export default function HikvisionDevicePanel({ companies = [] }) {
   useEffect(() => {
     if (expanded) loadDevices();
   }, [expanded]);
+
+  const syncInProgress = Object.values(bridgeSyncs).some((s) =>
+    (s?.data || []).some((r) => r.status === "pending" || r.status === "running")
+  );
+
+  useEffect(() => {
+    if (!expanded || !syncInProgress) return undefined;
+    const timer = setInterval(() => loadBridgeSyncs(devices), 15000);
+    return () => clearInterval(timer);
+  }, [expanded, syncInProgress, devices]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -151,7 +177,34 @@ export default function HikvisionDevicePanel({ companies = [] }) {
     });
 
     if (!result.isConfirmed || !result.value) return;
-    await runAction("Sync", () => hikvisionService.syncNow(deviceId, result.value));
+
+    try {
+      const res = await hikvisionService.syncNow(deviceId, result.value);
+      if (res?.data?.queued) {
+        Swal.fire({
+          icon: res.data.agent_online ? "success" : "warning",
+          title: res.data.agent_online ? "Sync sent to office PC" : "Sync queued",
+          text: res.message,
+        });
+        loadBridgeSyncs(devices);
+        return;
+      }
+      Swal.fire({
+        icon: "success",
+        title: "Sync",
+        text: res?.message || `Imported ${res?.data?.imported ?? 0}, skipped ${res?.data?.skipped ?? 0}`,
+      });
+      loadDevices();
+    } catch (err) {
+      Swal.fire({ icon: "error", title: "Sync failed", text: err.response?.data?.message || err.message });
+    }
+  };
+
+  const syncStatusStyle = {
+    pending: "bg-amber-100 text-amber-800",
+    running: "bg-blue-100 text-blue-800",
+    done: "bg-green-100 text-green-800",
+    failed: "bg-red-100 text-red-800",
   };
 
   const showAgentConfig = async (deviceId) => {
@@ -221,8 +274,8 @@ export default function HikvisionDevicePanel({ companies = [] }) {
       {expanded && (
         <div className="p-4 space-y-4">
           <p className="text-sm text-slate-600">
-            Working sync: LAN <b>Sync Now</b> opens a date picker to pull fingerprint events (default last 7 days; up to ~30 days for offline catch-up).
-            Cloud HR uses the office <b>hikvision-bridge</b> → Punches URL. Device user ID must match{" "}
+            <b>Sync Now</b> opens a date picker to re-read fingerprint punches for missed days (default last 7 days).
+            On cloud HR the request is sent to the office <b>hikvision-bridge</b> PC, which must be on. Device user ID must match{" "}
             <strong>Attendance Employee No</strong>.
           </p>
 
@@ -337,6 +390,31 @@ export default function HikvisionDevicePanel({ companies = [] }) {
               )}
               {d.last_error && (
                 <p className="text-xs text-red-600">Last error: {d.last_error}</p>
+              )}
+
+              {!d.lan_mode && bridgeSyncs[d.id] && (
+                <div className="text-xs space-y-1 border-t pt-2">
+                  <p className={bridgeSyncs[d.id].agent_online ? "text-green-700" : "text-amber-700"}>
+                    <span className="font-semibold">Office PC:</span>{" "}
+                    {bridgeSyncs[d.id].agent_online ? "Online" : "Not connected"}
+                    {bridgeSyncs[d.id].agent_last_seen_at &&
+                      ` (last seen ${new Date(bridgeSyncs[d.id].agent_last_seen_at).toLocaleString()})`}
+                  </p>
+                  {(bridgeSyncs[d.id].data || []).slice(0, 5).map((r) => (
+                    <div key={r.id} className="flex flex-wrap items-start gap-2">
+                      <span className={`px-1.5 py-0.5 rounded capitalize ${syncStatusStyle[r.status] || "bg-gray-100"}`}>
+                        {r.status}
+                      </span>
+                      <span className="text-slate-700">
+                        {r.from_date === r.to_date ? r.from_date : `${r.from_date} → ${r.to_date}`}
+                      </span>
+                      {r.message && <span className="text-slate-500">{r.message}</span>}
+                      {(r.errors || []).length > 0 && (
+                        <span className="text-red-600 w-full">{r.errors.slice(0, 3).join("; ")}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
 
               <div className="flex flex-wrap gap-2 pt-1">

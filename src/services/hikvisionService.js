@@ -31,6 +31,11 @@ const hikvisionService = {
     return res.data;
   },
 
+  getSyncRequests: async (id) => {
+    const res = await axios.get(`/hikvision/devices/${id}/sync-requests`);
+    return res.data;
+  },
+
   configureWebhook: async (id) => {
     const res = await axios.post(`/hikvision/devices/${id}/configure-webhook`);
     return res.data;
