@@ -63,6 +63,7 @@ const EMPLOYEE_ADDON_PACKS = [
   ["al_results", "A/L"],
   ["previous_employment", "Prev. employment"],
   ["hr_company_create", "HR adds companies"],
+  ["contract_as_permanent", "Contract = permanent"],
 ];
 
 const packOn = (company, key) =>
@@ -122,6 +123,7 @@ const emptyForm = {
   following_qualifications: false,
   previous_employment: false,
   hr_company_create: false,
+  contract_as_permanent: false,
   medical_annual_quota: 0,
   punch_enabled: false,
   punch_scope: "company",
@@ -291,6 +293,7 @@ export default function CyberneticAdminPage() {
       following_qualifications: packOn(company, "following_qualifications"),
       previous_employment: packOn(company, "previous_employment"),
       hr_company_create: packOn(company, "hr_company_create"),
+      contract_as_permanent: packOn(company, "contract_as_permanent"),
       medical_annual_quota: company.process_config?.medical_claims?.annual_quota || 0,
       salary_advance_percent: company.process_config?.salary_advance?.percent || 50,
       salary_advance_hr_deduct_from:
@@ -354,6 +357,7 @@ export default function CyberneticAdminPage() {
           following_qualifications: { enabled: !!form.following_qualifications },
           previous_employment: { enabled: !!form.previous_employment },
           hr_company_create: { enabled: !!form.hr_company_create },
+          contract_as_permanent: { enabled: !!form.contract_as_permanent },
           late_grace_nopay: {
             enabled: !!form.late_grace_nopay,
             start_time: form.late_grace_start_time || "07:15",
@@ -1175,6 +1179,22 @@ export default function CyberneticAdminPage() {
                   Shows Add Company in Department Master for HR users of this company who have Department Master &quot;add&quot;
                   permission. HR sets code, name, location, established and NoPay days only; the new company joins this
                   company&apos;s organization group. Branding, portal URL and add-ons stay here in Cybernetic Admin.
+                </span>
+              </span>
+            </label>
+            <label className="flex items-start gap-2 rounded-lg border border-slate-200 bg-white p-3 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={!!form.contract_as_permanent}
+                onChange={(e) => setForm({ ...form, contract_as_permanent: e.target.checked })}
+              />
+              <span>
+                <span className="font-semibold text-slate-900">Contract employees follow the permanent process</span>
+                <span className="block text-xs text-slate-600 mt-0.5">
+                  Off = contract employees are kept out of the normal process and appear only in Contract Time Attendance.
+                  On = this company&apos;s contract employees appear everywhere permanent employees do: employee lists, time
+                  cards, attendance and absent reports, overtime, leave, dashboard counts and salary processing.
                 </span>
               </span>
             </label>
