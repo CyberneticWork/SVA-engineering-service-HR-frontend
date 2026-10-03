@@ -327,8 +327,8 @@ function AssignModal({
   }, [predefined, companyId]);
 
   const selected = useMemo(
-    () => filteredItems.find((a) => String(a.id) === String(itemId)),
-    [filteredItems, itemId]
+    () => predefined.find((a) => String(a.id) === String(itemId)),
+    [predefined, itemId]
   );
   const salaryAdvance = idKey === "deduction_id" && isSalaryAdvanceItem(selected, nameKey, codeKey);
 

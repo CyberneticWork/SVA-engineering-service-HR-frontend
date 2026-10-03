@@ -92,3 +92,6 @@ export const reviewAdvanceRequest = (id, payload) =>
 
 export const createHrAdvance = (payload) =>
   axios.post('/hr/advance-requests', payload).then((r) => r.data);
+
+export const updateAdvanceDeductFrom = (id, deduct_from) =>
+  axios.post(`/hr/advance-requests/${id}/deduct-from`, { deduct_from }).then((r) => r.data);

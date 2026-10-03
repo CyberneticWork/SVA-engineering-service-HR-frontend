@@ -4,6 +4,7 @@ import {
   createHrAdvance,
   listAdvanceRequests,
   reviewAdvanceRequest,
+  updateAdvanceDeductFrom,
 } from "../../services/EmployeePortalService";
 import employeeService from "../../services/EmployeeDataService";
 
@@ -14,7 +15,12 @@ const money = (v) =>
   })}`;
 
 const deductLabel = (row) => {
-  const v = String(row.deduct_from || row.hr_deduct_from || "").toLowerCase();
+  if (row.status === "REJECTED") return null;
+  const saved = String(row.deduct_from || "").toLowerCase();
+  // Payroll treats an approved advance without a saved choice as monthly bonus.
+  const v = row.status === "PENDING"
+    ? saved || String(row.hr_deduct_from || "").toLowerCase()
+    : saved || "bonus";
   if (v === "basic") return "Basic salary";
   if (v === "bonus") return "Monthly bonus";
   return null;
@@ -69,6 +75,7 @@ export default function AdvanceApprovals() {
     deduct_from: "bonus",
   });
   const [approveFrom, setApproveFrom] = useState({});
+  const [changeFrom, setChangeFrom] = useState({});
 
   const load = async () => {
     try {
@@ -106,6 +113,21 @@ export default function AdvanceApprovals() {
       await load();
     } catch (e) {
       setMsg(e?.response?.data?.message || "Review failed");
+    }
+  };
+
+  const saveDeductFrom = async (row) => {
+    try {
+      const res = await updateAdvanceDeductFrom(row.id, changeFrom[row.id]);
+      setMsg(res?.message || "Payroll deduct source updated");
+      setChangeFrom((prev) => {
+        const next = { ...prev };
+        delete next[row.id];
+        return next;
+      });
+      await load();
+    } catch (e) {
+      setMsg(e?.response?.data?.message || "Update failed");
     }
   };
 
@@ -263,7 +285,15 @@ export default function AdvanceApprovals() {
                     </p>
                   )}
                 </div>
-                <span className="h-fit px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                <span
+                  className={`h-fit px-2.5 py-1 rounded-full text-xs font-semibold ${
+                    row.status === "APPROVED"
+                      ? "bg-emerald-100 text-emerald-800"
+                      : row.status === "REJECTED"
+                        ? "bg-red-100 text-red-800"
+                        : "bg-amber-100 text-amber-800"
+                  }`}
+                >
                   {row.status}
                 </span>
               </div>
@@ -301,6 +331,27 @@ export default function AdvanceApprovals() {
                     <X className="w-4 h-4" /> Reject
                   </button>
                   </div>
+                </div>
+              )}
+
+              {row.status === "APPROVED" && (
+                <div className="mt-3 flex flex-col gap-2">
+                  <DeductFromField
+                    value={changeFrom[row.id] || (row.deduct_from === "basic" ? "basic" : "bonus")}
+                    onChange={(deduct_from) =>
+                      setChangeFrom({ ...changeFrom, [row.id]: deduct_from })
+                    }
+                  />
+                  {changeFrom[row.id] &&
+                    changeFrom[row.id] !== (row.deduct_from === "basic" ? "basic" : "bonus") && (
+                      <button
+                        type="button"
+                        onClick={() => saveDeductFrom(row)}
+                        className="self-start inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-teal-700 text-white text-sm font-semibold"
+                      >
+                        <Check className="w-4 h-4" /> Save deduct source
+                      </button>
+                    )}
                 </div>
               )}
             </article>
