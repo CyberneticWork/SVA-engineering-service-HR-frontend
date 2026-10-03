@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import axios from "@utils/axios";
+import { isAdvanceDeduction } from "@utils/salaryAdvance";
 import BonusService from "../../components/BonusService";
 import {
   Download, Users, Wallet, FileText, ChevronDown, Filter,
@@ -437,11 +438,7 @@ const SalaryProcessPage = () => {
     ].filter((item) => item.amount > 0);
 
     const customDeductionsList = deductions
-      .filter((d) => {
-        if (salaryAdvanceBasic + salaryAdvanceBonus <= 0) return true;
-        const n = String(d.name || "").toLowerCase();
-        return !n.includes("salary advance") && n !== "advance" && !n.includes("salary_advance");
-      })
+      .filter((d) => salaryAdvanceBasic + salaryAdvanceBonus <= 0 || !isAdvanceDeduction(d))
       .map((d) => ({
        label: `${d.name} (${d.category || 'General'})`,
        amount: Number(d.amount || 0)

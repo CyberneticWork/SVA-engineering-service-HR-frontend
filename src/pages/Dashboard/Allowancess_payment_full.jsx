@@ -265,7 +265,7 @@ const Reports = () => {
         e.name, e.epf_member_no || e.emp_no || "-", e.date_joined || "-",
         fmt(e.base_basic_salary), fmt(e.budgetary_allowance), fmt(e.budget_relief_allowance), fmt(e.total_salary_sch01),
         fmt(e.basic_no_pay), fmt(e.salary_for_epf),
-        fmt(0), fmt(e.loan_on_basic),
+        fmt(e.salary_advance_basic), fmt(e.loan_on_basic),
         fmt(e.epf_8),
         fmt(e.epf_schedule_deductions), fmt(e.epf_schedule_net)
       ];
@@ -290,7 +290,7 @@ const Reports = () => {
       const row = [
         e.name, e.date_joined || "-",
         fmt(e.allowance_component), fmt(e.allowance_gross),
-        fmt(e.bonus_no_pay), fmt(e.salary_advance),
+        fmt(e.bonus_no_pay), fmt(e.salary_advance_bonus ?? e.salary_advance),
         fmt(e.loan_on_bonus), fmt(e.loan_interest),
         fmt(e.sports_fund), fmt(e.staff_fund), fmt(e.allowance_other_deductions ?? e.other_deduction),
         fmt(e.allowance_deductions), fmt(e.allowance_net)
@@ -566,6 +566,7 @@ const Reports = () => {
     const bonusNp = sumField('bonus_no_pay');
     const totalNp = sumField('no_pay_amount');
     const advance = sumField('salary_advance');
+    const advanceBasic = sumField('salary_advance_basic');
     const loanInst = sumField('loan_installment');
     const loanInt = sumField('loan_interest');
     const sports = sumField('sports_fund');
@@ -580,13 +581,13 @@ const Reports = () => {
       ["Earnings", fmt(salaryComp), fmt(allowComp), fmt(gross)],
       ["Less: No pay", fmt(basicNp), fmt(bonusNp), fmt(totalNp)],
       ["Gross Pay", fmt(salaryComp - basicNp), fmt(allowComp - bonusNp), fmt(gross - totalNp)],
-      ["Salary Advance", fmt(0), fmt(advance), fmt(advance)],
+      ["Salary Advance", fmt(advanceBasic), fmt(advance - advanceBasic), fmt(advance)],
       ["Loan Installment", fmt(sumField('loan_on_basic')), fmt(sumField('loan_on_bonus')), fmt(loanInst)],
       ["Loan Interest", fmt(0), fmt(loanInt), fmt(loanInt)],
       ["Sports Fund", fmt(0), fmt(sports), fmt(sports)],
       ["Staff Fund", fmt(0), fmt(staff), fmt(staff)],
       ["EPF 8%", fmt(epf8), fmt(0), fmt(epf8)],
-      ["Total Deductions", fmt(epf8 + basicNp + sumField('loan_on_basic')), fmt(totalDed - epf8 - basicNp - sumField('loan_on_basic')), fmt(totalDed)],
+      ["Total Deductions", fmt(epf8 + basicNp + sumField('loan_on_basic') + advanceBasic), fmt(totalDed - epf8 - basicNp - sumField('loan_on_basic') - advanceBasic), fmt(totalDed)],
       ["Net Pay", fmt(basicNet), fmt(allowNet), fmt(net)],
     ];
 

@@ -1,5 +1,6 @@
 import React from "react";
 import { Download } from "lucide-react";
+import { isAdvanceDeduction } from "@utils/salaryAdvance";
 
 const formatMoney = (value) =>
   Number(value || 0).toLocaleString("en-US", {
@@ -57,7 +58,6 @@ const EmployeeSalaryCard = ({ employee, empId, isSelected, onSelect, onDownload 
 
   const listedAllowancesTotal = sumAmounts(allowances);
   const listedBonusesTotal = sumAmounts(bonuses);
-  const listedCustomDeductionsTotal = sumAmounts(deductions);
 
   const brAllowance = Number(breakdown.br_allowance || 0);
   const dinnerInList = allowances.some((a) => String(a.category || "").toLowerCase() === "dinner_allowance");
@@ -116,6 +116,10 @@ const EmployeeSalaryCard = ({ employee, empId, isSelected, onSelect, onDownload 
   );
   const salaryAdvanceBasic = Number(breakdown.salary_advance_basic || 0);
   const salaryAdvanceBonus = Number(breakdown.salary_advance_bonus || 0);
+  // Payroll already places advances on the basic or bonus side; don't list the assigned line again.
+  const customDeductions = salaryAdvanceBasic + salaryAdvanceBonus > 0
+    ? deductions.filter((d) => !isAdvanceDeduction(d))
+    : deductions;
 
   const totalLatePenalty =
     shortLeaveLate + halfDayLate + majorLateNoPay + saturdayNoPay + lateGraceBasic + lateGraceBonus;
@@ -188,7 +192,7 @@ const EmployeeSalaryCard = ({ employee, empId, isSelected, onSelect, onDownload 
     { label: "Half Day Penalty (Late)", amount: halfDayLate },
     { label: "Early Out No-Pay", amount: earlyOutNoPay },
     { label: "Saturday No-Pay", amount: saturdayNoPay },
-    ...deductions.map((d) => ({
+    ...customDeductions.map((d) => ({
       label: d.name || "Custom Deduction",
       amount: Number(d.amount) || 0,
       hint: d.category || "General",
@@ -206,6 +210,7 @@ const EmployeeSalaryCard = ({ employee, empId, isSelected, onSelect, onDownload 
       : []),
   ];
 
+  const listedCustomDeductionsTotal = sumAmounts(customDeductions);
   const basicDeductionsSum = sumAmounts(basicDeductionLines);
   const bonusDeductionsSum = sumAmounts(bonusDeductionLines);
   const reconstructedTotalDeductions = basicDeductionsSum + bonusDeductionsSum + stampDuty;
